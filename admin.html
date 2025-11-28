@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Admin Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3f51b5; --danger-color: #f44336; --success-color: #4caf50; --warning-color: #ffc107;
+            --bg-dark: #121212; --bg-light: #1e1e1e; --bg-medium: #2a2a2a;
+            --text-primary: #ffffff; --text-secondary: #b3b3b3; --border-color: #333333;
+        }
+        body {
+            font-family: 'Poppins', sans-serif; margin: 0; background-color: var(--bg-dark); color: var(--text-primary);
+            display: flex; visibility: hidden; animation: fadeIn 0.5s ease-in-out forwards;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* --- Sidebar Mobile First Styles --- */
+        .sidebar {
+            width: 260px; background-color: var(--bg-light); padding: 1.5rem 1rem; height: 100vh;
+            position: fixed; top: 0; left: 0; border-right: 1px solid var(--border-color); display: flex; flex-direction: column;
+            transform: translateX(-100%); /* Hidden by default on mobile */
+            transition: transform 0.3s ease-in-out;
+            z-index: 1200; /* Ensure sidebar is on top */
+        }
+        .sidebar.show {
+            transform: translateX(0); /* Show sidebar */
+        }
+        
+        .sidebar-header { font-size: 1.5rem; font-weight: 600; text-align: center; margin-bottom: 2rem; color: var(--primary-color); }
+        .sidebar-header i { margin-right: 10px; }
+        .admin-nav { display: flex; flex-direction: column; gap: 0.5rem; flex-grow: 1; }
+        .nav-button {
+            background-color: transparent; padding: 0.9rem 1.2rem; border: none; color: var(--text-secondary); cursor: pointer;
+            border-radius: 8px; font-size: 1rem; font-weight: 500; display: flex; align-items: center; gap: 1rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-button:hover { background-color: var(--bg-medium); color: var(--text-primary); }
+        .nav-button.active { background-color: var(--primary-color); color: white; }
+        .nav-button i { width: 20px; text-align: center; }
+        
+        /* --- Main Content Mobile First Styles --- */
+        .main-content { 
+            margin-left: 0; /* No margin on mobile */
+            padding: 2rem; 
+            width: 100%; /* Full width on mobile */
+            overflow-y: auto; 
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .main-header h1 { margin: 0; font-size: 1.8rem; flex-grow: 1; text-align: center; } /* Adjusted for mobile */
+        
+        /* --- Hamburger Menu Button --- */
+        .menu-toggle-btn {
+            display: block; /* Show on mobile */
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+        
+        /* --- Overlay for Mobile Menu --- */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none; /* Hidden by default */
+            z-index: 1100; /* Below sidebar, above content */
+        }
+        #overlay.show {
+            display: block;
+        }
+
+        /* --- Desktop Styles (using media query) --- */
+        @media (min-width: 992px) {
+            .sidebar {
+                transform: translateX(0); /* Always visible on desktop */
+                position: fixed;
+            }
+            .main-content {
+                margin-left: 260px; /* Restore margin for desktop */
+                width: calc(100% - 260px); /* Restore width for desktop */
+            }
+            .menu-toggle-btn {
+                display: none; /* Hide hamburger on desktop */
+            }
+            .main-header h1 {
+                font-size: 2rem;
+                text-align: left; /* Align h1 to left on desktop */
+            }
+            #overlay {
+                display: none !important; /* Ensure overlay is never shown on desktop */
+            }
+        }
+        
+        .admin-section { display: none; animation: slideInUp 0.4s ease; }
+        .admin-section.active { display: block; }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .form-section, .list-section { background-color: var(--bg-light); padding: 2rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--border-color); }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-top: 0; margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; margin-bottom: .5rem; font-weight: 500; color: var(--text-secondary); }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: .9rem; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-medium);
+            color: var(--text-primary); box-sizing: border-box; font-size: 1rem; transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.3); }
+        button, .btn { padding: 0.8rem 1.8rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; font-size: 1rem; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.5rem; }
+        button:disabled { background-color: #555; cursor: not-allowed; }
+        .btn-primary { background-color: var(--primary-color); } .btn-danger { background-color: var(--danger-color); } .btn-warning { background-color: var(--warning-color); color: var(--bg-dark); } .btn-secondary { background-color: var(--bg-medium); border: 1px solid var(--border-color); }
+        .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .stat-card { background: linear-gradient(145deg, var(--bg-medium), var(--bg-light)); padding: 1.5rem; border-radius: 12px; display: flex; align-items: center; gap: 1.5rem; border-left: 5px solid var(--primary-color); }
+        .stat-card i { font-size: 2.5rem; color: var(--primary-color); background-color: rgba(63, 81, 181, 0.1); padding: 1rem; border-radius: 50%; }
+        .stat-info h3 { margin: 0; font-size: 1rem; color: var(--text-secondary); font-weight: 500; }
+        .stat-info p { margin: 0.25rem 0 0; font-size: 2rem; font-weight: 700; color: var(--text-primary); }
+        .content-list { display: flex; flex-direction: column; gap: 1rem; }
+        .content-item { display: grid; grid-template-columns: 50px 1fr auto; align-items: center; gap: 1.5rem; padding: 1rem; background-color: var(--bg-medium); border-radius: 8px; transition: background-color 0.2s; }
+        .content-item img { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; }
+        .content-actions { display: flex; gap: 0.5rem; }
+        .content-actions .btn { padding: 0.5rem 1rem; font-size: 0.9rem; }
+        #list-loader, #analytics-loader { text-align: center; padding: 2rem; font-size: 1.2rem; color: var(--text-secondary); }
+        #search-content-input { width: 100%; max-width: 300px; padding: .7rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-medium); color: var(--text-primary); box-sizing: border-box; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(5px); }
+        .modal.show { display: flex; }
+        .modal-content { background-color: var(--bg-light); width: 90%; max-width: 800px; max-height: 90vh; border-radius: 12px; display: flex; flex-direction: column; animation: fadeIn 0.3s; }
+        .modal-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { margin: 0; border: none; }
+        .modal-body { padding: 1.5rem; overflow-y: auto; }
+        .modal-footer { padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 1rem; }
+        .d-grid { display: grid; } .grid-cols-2 { grid-template-columns: 1fr 1fr; } .gap-1 { gap: 1rem; }
+        .part-entry { background-color: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid var(--primary-color); }
+        .part-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .progress-bar-container { margin-bottom: 1rem; }
+        .progress-label { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-weight: bold; }
+        .progress-track { background-color: #212529; border-radius: 5px; height: 20px; width: 100%; }
+        .progress-bar { background: linear-gradient(90deg, var(--success-color), var(--primary-color)); height: 100%; border-radius: 5px; transition: width 0.5s ease-in-out; }
+        .views-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .views-table th, .views-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .views-table th { background-color: var(--bg-dark); }
+        .grid-2-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header"><i class="fas fa-shield-halved"></i> Admin</div>
+        <nav class="admin-nav">
+            <button class="nav-button active" data-target="dashboard-section"><i class="fas fa-chart-pie"></i> Dashboard</button>
+            <button class="nav-button" data-target="content-section"><i class="fas fa-edit"></i> Manage Content</button>
+            <button class="nav-button" data-target="requests-section"><i class="fas fa-inbox"></i> Movie Requests</button>
+            <button class="nav-button" data-target="notifications-section"><i class="fas fa-paper-plane"></i> Notifications</button>
+            <button class="nav-button" data-target="update-section"><i class="fas fa-sync-alt"></i> App Update</button>
+        </nav>
+    </div>
+
+    <main class="main-content">
+        <div id="dashboard-section" class="admin-section active">
+            <!-- Header has been modified to include the toggle button -->
+            <div class="main-header">
+                <button id="menu-toggle-btn" class="menu-toggle-btn"><i class="fas fa-bars"></i></button>
+                <h1>Dashboard</h1>
+                <button id="refresh-dashboard-btn" class="btn btn-secondary"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div id="analytics-loader"><p>Loading analytics data...</p></div>
+            <div id="analytics-content" style="display: none;">
+                <div class="stats-container">
+                    <div class="stat-card"><i class="fas fa-eye"></i><div class="stat-info"><h3>Total App Opens</h3><p id="total-app-opens">0</p></div></div>
+                    <div class="stat-card"><i class="fas fa-download"></i><div class="stat-info"><h3>Total Downloads</h3><p id="total-movie-downloads">0</p></div></div>
+                    <div class="stat-card"><i class="fas fa-film"></i><div class="stat-info"><h3>Total Content</h3><p id="total-content-count">0</p></div></div>
+                    <div class="stat-card"><i class="fas fa-inbox"></i><div class="stat-info"><h3>Pending Requests</h3><p id="total-requests-count">0</p></div></div>
+                </div>
+                <div class="grid-2-col" style="margin-top: 2rem;">
+                    <div class="list-section"><h2>Downloads by Category</h2><div id="category-breakdown"></div></div>
+                    <div class="list-section"><h2>Top Requested Movies</h2><div id="top-requests-list"><p>Loading top requests...</p></div></div>
+                </div>
+                <div class="list-section" style="margin-top: 2rem;">
+                    <h2>Recent Downloads</h2>
+                    <div style="overflow-x:auto;">
+                        <table class="views-table">
+                            <thead><tr><th>Movie Name</th><th>Category</th><th>Date</th></tr></thead>
+                            <tbody id="recent-downloads-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="content-section" class="admin-section">
+            <div class="main-header">
+                <button id="menu-toggle-btn-content" class="menu-toggle-btn"><i class="fas fa-bars"></i></button>
+                <h1>Manage Content</h1>
+                <button id="show-add-modal-btn" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+            </div>
+            <div class="list-section">
+                 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem;">
+                     <h2>Uploaded Content</h2>
+                     <input type="text" id="search-content-input" placeholder="Search content by name...">
+                </div>
+                <div id="content-list-container" class="content-list"><p id="list-loader">Loading content list...</p></div>
+            </div>
+        </div>
+        <div id="requests-section" class="admin-section">
+            <div class="main-header">
+                <button id="menu-toggle-btn-requests" class="menu-toggle-btn"><i class="fas fa-bars"></i></button>
+                <h1>Movie Requests</h1>
+            </div>
+            <div class="list-section"><div id="requests-list"><p>Loading requests...</p></div></div>
+        </div>
+        <div id="notifications-section" class="admin-section">
+            <div class="main-header">
+                <button id="menu-toggle-btn-notifications" class="menu-toggle-btn"><i class="fas fa-bars"></i></button>
+                <h1>Send Push Notification</h1>
+            </div>
+            <div class="form-section">
+                <h2>Compose Notification</h2>
+                <form id="notification-form">
+                    <div class="form-group"><label for="notification-title">Title</label><input type="text" id="notification-title" placeholder="e.g., New Movie Added!" required></div>
+                    <div class="form-group"><label for="notification-body">Message</label><textarea id="notification-body" rows="4" placeholder="e.g., Watch the latest blockbuster 'Fighter' now!" required></textarea></div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Send to All Users</button>
+                </form>
+            </div>
+        </div>
+        <div id="update-section" class="admin-section">
+            <div class="main-header">
+                <button id="menu-toggle-btn-update" class="menu-toggle-btn"><i class="fas fa-bars"></i></button>
+                <h1>App Update Settings</h1>
+            </div>
+            <div class="form-section">
+                <form id="update-app-form">
+                    <div class="form-group"><label for="appVersion">Latest App Version Code</label><input type="number" step="0.1" id="appVersion" placeholder="e.g., 1.2" required></div>
+                    <div class="form-group"><label for="appDownloadUrl">App Download Link</label><input type="url" id="appDownloadUrl" placeholder="https://example.com/app.apk" required></div>
+                    <button type="submit" class="btn btn-primary">Save Update Info</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <div id="overlay"></div> <!-- Added overlay for mobile -->
+
+    <div id="content-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2 id="modal-title">Add New Content</h2><button class="close-modal-btn" style="background:none; color:white; font-size:1.5rem;">×</button></div>
+            <div class="modal-body">
+                <form id="content-form">
+                    <input type="hidden" id="content-id">
+                    <div class="form-group"><label for="name">Name (Movie/Series/Anime)</label><input type="text" id="name" required></div>
+                    <div class="form-group"><label for="posterUrl">Poster Image URL or HTML Tag</label><input type="text" id="posterUrl" required></div>
+                    <div class="d-grid grid-cols-2 gap-1">
+                        <div class="form-group"><label for="type">Type</label><select id="type" required><option value="Movie">Movie</option><option value="Series">Series</option><option value="Anime">Anime</option></select></div>
+                        <div class="form-group"><label for="category">Category</label><select id="category" required><option value="Bollywood">Bollywood</option><option value="Hollywood">Hollywood</option><option value="South">South</option><option value="Korean">Korean</option><option value="Gujarati">Gujarati</option><option value="Anime">Anime</option></select></div>
+                    </div>
+                    <div class="form-group"><label for="movieDetails">Movie Details (Har detail nayi line me `Key: Value` format me)</label><textarea id="movieDetails" rows="6" placeholder="Genre: Action, Drama
+Duration: 2h 13mint
+Release Date: 2025
+Language: Hindi
+Description: A tragic accident pushes..."></textarea></div>
+                    <div class="form-group"><label for="screenshots">Screenshot URLs or HTML Tags (Har URL/tag nayi line me)</label><textarea id="screenshots" rows="3"></textarea></div>
+                    <div id="movie-download-section">
+                        <h3>Download URLs (For Movies)</h3>
+                        <div class="d-grid grid-cols-2 gap-1">
+                            <div class="form-group"><label for="downloadUrl480p">480p URL</label><input type="url" class="download-url-480p" id="downloadUrl480p"></div><div class="form-group"><label for="downloadUrl720p">720p URL</label><input type="url" class="download-url-720p" id="downloadUrl720p"></div><div class="form-group"><label for="downloadUrl1080p">1080p URL</label><input type="url" class="download-url-1080p" id="downloadUrl1080p"></div><div class="form-group"><label for="downloadUrl4k">4K URL</label><input type="url" class="download-url-4k" id="downloadUrl4k"></div>
+                        </div>
+                    </div>
+                    <div id="series-parts-section" style="display: none;">
+                        <h3>Manage Parts (For Series/Anime)</h3>
+                        <div id="parts-container"></div>
+                        <button type="button" class="btn btn-secondary" id="add-part-btn" style="width:100%;"><i class="fas fa-plus"></i> Add Part</button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="close-modal-btn btn btn-secondary">Cancel</button>
+                <button id="save-content-btn" class="btn btn-primary"><i class="fas fa-save"></i> Save Content</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // NOTE: This script is mostly unchanged, except for the new menu toggle logic at the end.
+        function authenticate() {
+            const correctPassword = "adminpassword123"; 
+            let password = localStorage.getItem("admin_panel_password");
+            if (password !== correctPassword) {
+                password = prompt("Please enter the admin password:", "");
+                if (password !== correctPassword) {
+                    alert("Incorrect Password. Access Denied.");
+                    document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top: 50px;">ACCESS DENIED</h1>';
+                    document.body.style.visibility = 'visible';
+                    return false;
+                }
+                localStorage.setItem("admin_panel_password", password);
+            }
+            document.body.style.visibility = 'visible';
+            return true;
+        }
+
+        if (!authenticate()) {
+            throw new Error("Authentication failed.");
+        }
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, setDoc, getDoc, query, orderBy, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjIg-GUxnvnZ9vMeLrFCtr-qpgyLjqQ24",
+            authDomain: "moviefly-5eec0.firebaseapp.com",
+            databaseURL: "https://moviefly-5eec0-default-rtdb.firebaseio.com",
+            projectId: "moviefly-5eec0",
+            storageBucket: "moviefly-5eec0.firebasestorage.app",
+            messagingSenderId: "967876821772",
+            appId: "1:967876821772:web:a1cdb080fdeb9a8cf33f29",
+            measurementId: "G-XLMRR97EBN"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- Globals ---
+        const contentModal = document.getElementById('content-modal');
+        const contentForm = document.getElementById('content-form');
+        const listLoader = document.getElementById('list-loader');
+        const contentListContainer = document.getElementById('content-list-container');
+        let allContentData = [];
+
+        // --- Utility Functions ---
+        const extractImageUrl = (htmlOrUrl) => {
+            if (typeof htmlOrUrl !== 'string') return '';
+            const trimmed = htmlOrUrl.trim();
+            if (trimmed.startsWith('<')) {
+                const match = trimmed.match(/src=["'](.*?)["']/);
+                return match ? match[1] : '';
+            }
+            return trimmed;
+        };
+
+        const showToast = (message, type = 'success') => {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed; top: 20px; right: 20px; background-color: ${type === 'success' ? 'var(--success-color)' : (type === 'error' ? 'var(--danger-color)' : 'var(--warning-color)')};
+                color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 2000; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                transform: translateX(120%); animation: slideInToast 0.5s forwards;
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideOutToast 0.5s forwards';
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        };
+        document.head.insertAdjacentHTML('beforeend', `<style>@keyframes slideInToast{to{transform:translateX(0)}}@keyframes slideOutToast{from{transform:translateX(0)}to{transform:translateX(120%)}}</style>`);
+
+        // --- Dashboard & Analytics ---
+        const displayAnalyticsData = async () => {
+            const loader = document.getElementById('analytics-loader');
+            const content = document.getElementById('analytics-content');
+            loader.style.display = 'block';
+            content.style.display = 'none';
+
+            try {
+                // Fetch all data in parallel
+                const [appOpensSnap, downloadEventsSnap, moviesSnap, requestsSnap] = await Promise.all([
+                    getDoc(doc(db, 'analytics', 'app_opens')),
+                    getDocs(query(collection(db, 'download_events'), orderBy('timestamp', 'desc'))),
+                    getDocs(collection(db, 'movies')), // SCALABILITY NOTE: Fetches ALL content docs. Not scalable.
+                    getDocs(query(collection(db, 'movieRequests'), orderBy('requestedAt', 'desc')))
+                ]);
+
+                // Populate Stats
+                document.getElementById('total-app-opens').textContent = (appOpensSnap.exists() ? appOpensSnap.data().count : 0).toLocaleString();
+                document.getElementById('total-movie-downloads').textContent = downloadEventsSnap.size.toLocaleString();
+                document.getElementById('total-content-count').textContent = moviesSnap.size.toLocaleString();
+                document.getElementById('total-requests-count').textContent = requestsSnap.size.toLocaleString();
+
+                // Process Downloads
+                const categoryCounts = {};
+                const recentDownloads = [];
+                downloadEventsSnap.forEach(docSnap => {
+                    const event = docSnap.data();
+                    if (event.category) categoryCounts[event.category] = (categoryCounts[event.category] || 0) + 1;
+                    if (recentDownloads.length < 20) recentDownloads.push(event);
+                });
+
+                // Render Category Breakdown
+                const categoryBreakdownDiv = document.getElementById('category-breakdown');
+                categoryBreakdownDiv.innerHTML = '';
+                if (downloadEventsSnap.size > 0) {
+                    Object.entries(categoryCounts).sort((a,b) => b[1] - a[1]).forEach(([category, count]) => {
+                        const percentage = ((count / downloadEventsSnap.size) * 100).toFixed(1);
+                        categoryBreakdownDiv.innerHTML += `<div class="progress-bar-container"><div class="progress-label"><span>${category}</span><span>${percentage}% (${count})</span></div><div class="progress-track"><div class="progress-bar" style="width: ${percentage}%;"></div></div></div>`;
+                    });
+                } else {
+                    categoryBreakdownDiv.innerHTML = '<p>No download data available.</p>';
+                }
+
+                // Render Recent Downloads Table
+                const tableBody = document.getElementById('recent-downloads-table-body');
+                tableBody.innerHTML = recentDownloads.length > 0
+                    ? recentDownloads.map(event => `<tr><td>${event.movieName || 'N/A'}</td><td>${event.category || 'N/A'}</td><td>${event.timestamp?.toDate().toLocaleString() ?? 'N/A'}</td></tr>`).join('')
+                    : '<tr><td colspan="3" style="text-align:center;">No recent downloads.</td></tr>';
+                
+                // Process and Render Top Requests
+                const requestCounts = {};
+                requestsSnap.forEach(doc => {
+                    const name = doc.data().name.trim().toLowerCase();
+                    if (name) requestCounts[name] = (requestCounts[name] || 0) + 1;
+                });
+                const topRequestsListDiv = document.getElementById('top-requests-list');
+                topRequestsListDiv.innerHTML = '';
+                const sortedRequests = Object.entries(requestCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                if (sortedRequests.length > 0) {
+                    sortedRequests.forEach(([name, count]) => {
+                         topRequestsListDiv.innerHTML += `<div style="display:flex; justify-content:space-between; padding: 5px 0; text-transform: capitalize;"><span>${name}</span> <strong>${count}</strong></div>`;
+                    });
+                } else {
+                    topRequestsListDiv.innerHTML = '<p>No requests yet.</p>';
+                }
+
+                loader.style.display = 'none';
+                content.style.display = 'block';
+
+            } catch (error) {
+                console.error("Error fetching analytics data:", error);
+                loader.innerHTML = '<p style="color:var(--danger-color);">Error loading analytics data. Please check console for details.</p>';
+            }
+        };
+
+        // --- Content Management (CRUD) ---
+        const renderContentList = (contentArray) => {
+            contentListContainer.innerHTML = '';
+            if (contentArray.length === 0) {
+                listLoader.style.display = 'none';
+                contentListContainer.innerHTML = '<p>No content found. Click "Add New Content" to start.</p>';
+                return;
+            }
+            listLoader.style.display = 'none';
+            contentListContainer.innerHTML = contentArray.map(movie => {
+                const posterSrc = extractImageUrl(movie.posterUrl);
+                const posterElement = `<img src="${posterSrc}" alt="Poster" loading="lazy" onerror="this.src='https://via.placeholder.com/50x75.png?text=No+Img';">`;
+                return `
+                <div class="content-item" data-id="${movie.id}">
+                    ${posterElement}
+                    <div class="content-info"><h3>${movie.name}</h3><p>${movie.category} • ${movie.type}</p></div>
+                    <div class="content-actions">
+                        <button class="btn btn-warning edit-btn" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="btn btn-danger delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+        };
+        
+        const displayAdminMovies = async () => {
+            listLoader.style.display = 'block';
+            contentListContainer.innerHTML = '';
+            try {
+                const q = query(collection(db, 'movies'), orderBy('createdAt', 'desc'));
+                const querySnapshot = await getDocs(q);
+                allContentData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderContentList(allContentData);
+            } catch (error) {
+                console.error("Error fetching movies:", error);
+                listLoader.innerHTML = '<p style="color:var(--danger-color)">Failed to load content. Please check console for details.</p>';
+            }
+        };
+
+        const saveContent = async () => {
+            const saveButton = document.getElementById('save-content-btn');
+            const type = document.getElementById('type').value;
+
+            if (type === 'Series' || type === 'Anime') {
+                const partsData = getPartsDataFromModal();
+                if (partsData.hasError) {
+                    showToast(partsData.errorMessage, 'error');
+                    return; 
+                }
+            }
+            
+            saveButton.disabled = true;
+            saveButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`;
+
+            const contentId = document.getElementById('content-id').value;
+            
+            const contentData = {
+                name: document.getElementById('name').value.trim(),
+                posterUrl: document.getElementById('posterUrl').value.trim(),
+                type: type,
+                category: document.getElementById('category').value,
+                movieDetails: document.getElementById('movieDetails').value.trim(),
+                screenshots: document.getElementById('screenshots').value.trim().split('\n').map(url => url.trim()).filter(Boolean),
+                lastUpdatedAt: serverTimestamp(),
+            };
+
+            if (type === 'Series' || type === 'Anime') {
+                contentData.parts = getPartsDataFromModal().parts; 
+                contentData.downloadUrls = {};
+            } else {
+                contentData.downloadUrls = getDownloadUrlsFromModal();
+                contentData.parts = [];
+            }
+            
+            try {
+                if (contentId) {
+                    await updateDoc(doc(db, 'movies', contentId), contentData);
+                    showToast('Content updated successfully!');
+                } else {
+                    contentData.createdAt = serverTimestamp();
+                    await addDoc(collection(db, 'movies'), contentData);
+                    showToast('Content added successfully!');
+                }
+                contentModal.classList.remove('show');
+                await displayAdminMovies(); 
+            } catch (error) {
+                console.error("Error saving content: ", error);
+                showToast('Failed to save content. Check console for details.', 'error');
+            } finally {
+                saveButton.disabled = false;
+                saveButton.innerHTML = `<i class="fas fa-save"></i> Save Content`;
+            }
+        };
+        
+        const deleteContent = async (contentId) => {
+            const content = allContentData.find(item => item.id === contentId);
+            if (!content || !confirm(`Are you sure you want to delete "${content.name}"? This cannot be undone.`)) return;
+            
+            const deleteButton = document.querySelector(`.content-item[data-id="${contentId}"] .delete-btn`);
+            if (deleteButton) deleteButton.disabled = true;
+            
+            try {
+                await deleteDoc(doc(db, 'movies', contentId));
+                showToast('Content deleted!');
+                allContentData = allContentData.filter(item => item.id !== contentId);
+                renderContentList(allContentData);
+            } catch (error) {
+                console.error("Error deleting content: ", error);
+                showToast('Failed to delete content.', 'error');
+                if (deleteButton) deleteButton.disabled = false;
+            }
+        };
+
+        // --- Modal & Form Logic ---
+        const movieDownloadSection = document.getElementById('movie-download-section');
+        const seriesPartsSection = document.getElementById('series-parts-section');
+        const partsContainer = document.getElementById('parts-container');
+
+        const toggleDownloadSections = (type) => {
+            movieDownloadSection.style.display = (type === 'Movie') ? 'block' : 'none';
+            seriesPartsSection.style.display = (type === 'Series' || type === 'Anime') ? 'block' : 'none';
+        };
+        
+        const reindexPartLabels = () => {
+            const partEntries = partsContainer.querySelectorAll('.part-entry');
+            partEntries.forEach((partDiv, index) => {
+                const label = partDiv.querySelector('.part-header label');
+                if (label) label.textContent = `Part ${index + 1}`;
+            });
+        };
+
+        const createPartEntry = (part = {}, partIndex) => {
+            const partDiv = document.createElement('div');
+            partDiv.className = 'part-entry';
+            partDiv.innerHTML = `<div class="part-header"><label>Part ${partIndex}</label><button type="button" class="btn btn-danger btn-sm remove-part-btn"><i class="fas fa-trash"></i></button></div><div class="form-group"><input type="text" class="part-name-input" placeholder="Part Name (e.g., Episode 1)" value="${part.name || `Part ${partIndex}`}" required></div><div class="d-grid grid-cols-2 gap-1"><div class="form-group"><input type="url" class="part-url-480p" placeholder="480p URL" value="${part.downloadUrls?.['480p'] || ''}"></div><div class="form-group"><input type="url" class="part-url-720p" placeholder="720p URL" value="${part.downloadUrls?.['720p'] || ''}"></div><div class="form-group"><input type="url" class="part-url-1080p" placeholder="1080p URL" value="${part.downloadUrls?.['1080p'] || ''}"></div><div class="form-group"><input type="url" class="part-url-4k" placeholder="4K URL" value="${part.downloadUrls?.['4k'] || ''}"></div></div>`;
+            partDiv.querySelector('.remove-part-btn').onclick = () => {
+                partDiv.remove();
+                reindexPartLabels();
+            };
+            return partDiv;
+        };
+
+        document.getElementById('add-part-btn').onclick = () => {
+            const partIndex = partsContainer.children.length + 1;
+            partsContainer.appendChild(createPartEntry({}, partIndex));
+        };
+        document.getElementById('type').onchange = (e) => toggleDownloadSections(e.target.value);
+
+        const getDownloadUrlsFromModal = () => {
+            const urls = {};
+            ['480p', '720p', '1080p', '4k'].forEach(q => {
+                const urlInput = contentModal.querySelector(`.download-url-${q}`);
+                if (urlInput) {
+                    const url = urlInput.value.trim();
+                    if (url) urls[q] = url;
+                }
+            });
+            return urls;
+        };
+
+        const getPartsDataFromModal = () => {
+            const parts = [];
+            let hasError = false;
+            let errorMessage = '';
+
+            const partElements = partsContainer.querySelectorAll('.part-entry');
+            for (let i = 0; i < partElements.length; i++) {
+                const partEl = partElements[i];
+                const name = partEl.querySelector('.part-name-input').value.trim();
+                const downloadUrls = {};
+                ['480p', '720p', '1080p', '4k'].forEach(q => {
+                    const urlInput = partEl.querySelector(`.part-url-${q}`);
+                    if (urlInput) {
+                        const url = urlInput.value.trim();
+                        if (url) downloadUrls[q] = url;
+                    }
+                });
+
+                if (name && Object.keys(downloadUrls).length === 0) {
+                    hasError = true;
+                    errorMessage = `Validation Error: Part ${i + 1} ("${name}") has a name but no download URLs. Please add a URL or remove the part.`;
+                    break;
+                }
+                
+                if (name) {
+                    parts.push({ name, downloadUrls });
+                }
+            }
+            return { parts, hasError, errorMessage };
+        };
+        
+        const openContentModal = (content = null) => {
+            contentForm.reset();
+            document.getElementById('content-id').value = content ? content.id : '';
+            document.getElementById('modal-title').textContent = content ? `Edit: ${content.name}` : 'Add New Content';
+            partsContainer.innerHTML = '';
+
+            if (content) {
+                document.getElementById('name').value = content.name || '';
+                document.getElementById('posterUrl').value = content.posterUrl || '';
+                document.getElementById('type').value = content.type || 'Movie';
+                document.getElementById('category').value = content.category || 'Bollywood';
+                document.getElementById('movieDetails').value = content.movieDetails || '';
+                document.getElementById('screenshots').value = (content.screenshots || []).join('\n');
+                
+                toggleDownloadSections(content.type);
+                if (content.type === 'Movie' && content.downloadUrls) {
+                    Object.keys(content.downloadUrls).forEach(q => {
+                        const input = contentModal.querySelector(`.download-url-${q}`);
+                        if(input) input.value = content.downloadUrls[q];
+                    });
+                } else if (content.parts) {
+                    content.parts.forEach((part, index) => {
+                        partsContainer.appendChild(createPartEntry(part, index + 1));
+                    });
+                }
+            } else {
+                toggleDownloadSections('Movie');
+            }
+            contentModal.classList.add('show');
+        };
+
+        // --- Other Sections ---
+        const displayMovieRequests = async () => {
+            const requestsListDiv = document.getElementById('requests-list');
+            requestsListDiv.innerHTML = '<p>Loading requests...</p>';
+            try {
+                const q = query(collection(db, 'movieRequests'), orderBy('requestedAt', 'desc'));
+                const querySnapshot = await getDocs(q);
+                if (querySnapshot.empty) {
+                    requestsListDiv.innerHTML = '<p>No movie requests yet.</p>'; return;
+                }
+                requestsListDiv.innerHTML = '';
+                querySnapshot.forEach(docSnap => {
+                    const request = docSnap.data();
+                    const item = document.createElement('div');
+                    item.className = 'content-item';
+                    item.innerHTML = `<div class="content-info" style="grid-column: 1 / span 2;"><h3>${request.name}</h3><p>Requested: ${request.requestedAt?.toDate().toLocaleString() || 'N/A'}</p></div><div class="content-actions"><button class="btn btn-danger delete-request-btn" data-id="${docSnap.id}"><i class="fas fa-trash"></i></button></div>`;
+                    requestsListDiv.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Error fetching requests:", error);
+                requestsListDiv.innerHTML = '<p style="color:var(--danger-color)">Error loading requests. Check console for details.</p>';
+            }
+        };
+
+        const loadUpdateInfo = async () => {
+            try {
+                const docSnap = await getDoc(doc(db, 'app_config', 'updateInfo'));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('appVersion').value = data.latestVersion || '';
+                    document.getElementById('appDownloadUrl').value = data.downloadUrl || '';
+                }
+            } catch (error) { console.error("Error loading app config:", error); }
+        };
+
+        // --- Event Listeners & Initializers ---
+        document.getElementById('save-content-btn').addEventListener('click', saveContent);
+        document.getElementById('show-add-modal-btn').addEventListener('click', () => openContentModal());
+        document.querySelectorAll('.close-modal-btn').forEach(btn => btn.onclick = () => contentModal.classList.remove('show'));
+        contentListContainer.addEventListener('click', e => {
+            const editBtn = e.target.closest('.edit-btn');
+            const deleteBtn = e.target.closest('.delete-btn');
+            if (editBtn) {
+                const contentId = e.target.closest('.content-item').dataset.id;
+                const contentToEdit = allContentData.find(item => item.id === contentId);
+                if(contentToEdit) openContentModal(contentToEdit);
+            }
+            if (deleteBtn) {
+                const contentId = e.target.closest('.content-item').dataset.id;
+                deleteContent(contentId);
+            }
+        });
+
+        document.getElementById('requests-list').addEventListener('click', async e => {
+            const deleteButton = e.target.closest('.delete-request-btn');
+            if (deleteButton) {
+                const requestId = deleteButton.dataset.id;
+                if (confirm('Are you sure you want to delete this request?')) {
+                    deleteButton.disabled = true;
+                    try {
+                        await deleteDoc(doc(db, 'movieRequests', requestId));
+                        deleteButton.closest('.content-item').remove();
+                        showToast('Request deleted.', 'success');
+                    } catch (error) { 
+                        showToast('Failed to delete request.', 'error'); 
+                        deleteButton.disabled = false;
+                    }
+                }
+            }
+        });
+        
+        document.getElementById('search-content-input').addEventListener('input', e => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const filteredContent = allContentData.filter(item => item.name.toLowerCase().includes(searchTerm));
+            renderContentList(filteredContent);
+        });
+
+        document.getElementById('update-app-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const version = document.getElementById('appVersion').value;
+            const url = document.getElementById('appDownloadUrl').value;
+            const button = e.target.querySelector('button');
+            button.disabled = true;
+            try {
+                await setDoc(doc(db, 'app_config', 'updateInfo'), { latestVersion: parseFloat(version), downloadUrl: url });
+                showToast('App update information saved!');
+            } catch (error) { 
+                showToast('Failed to save information.', 'error'); 
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('notification-form').addEventListener('submit', e => {
+            e.preventDefault();
+            const title = document.getElementById('notification-title').value;
+            const body = document.getElementById('notification-body').value;
+            showToast(`Simulated Notification Sent to All Users!`, 'success');
+            console.log(`Notification Sent (Simulated):\nTitle: ${title}\nBody: ${body}`);
+            e.target.reset();
+        });
+
+        document.querySelectorAll('.nav-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelector('.nav-button.active').classList.remove('active');
+                button.classList.add('active');
+                document.querySelector('.admin-section.active').classList.remove('active');
+                const targetSection = document.getElementById(button.dataset.target);
+                targetSection.classList.add('active');
+
+                const targetId = button.dataset.target;
+                if (targetId === 'dashboard-section') displayAnalyticsData();
+                if (targetId === 'requests-section') displayMovieRequests();
+            });
+        });
+
+        document.getElementById('refresh-dashboard-btn').onclick = displayAnalyticsData;
+
+        // ---[ NEW ]--- MOBILE MENU TOGGLE LOGIC ---
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.getElementById('overlay');
+        
+        const openSidebar = () => {
+            sidebar.classList.add('show');
+            overlay.classList.add('show');
+        };
+
+        const closeSidebar = () => {
+            sidebar.classList.remove('show');
+            overlay.classList.remove('show');
+        };
+
+        // Add event listener to all toggle buttons
+        document.querySelectorAll('.menu-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', openSidebar);
+        });
+        
+        // Close sidebar when clicking on the overlay or a nav button
+        overlay.addEventListener('click', closeSidebar);
+        sidebar.addEventListener('click', (e) => {
+            if (e.target.closest('.nav-button')) {
+                closeSidebar();
+            }
+        });
+
+        // --- Initial Load ---
+        (async () => {
+            await displayAnalyticsData();
+            await displayAdminMovies();
+            await loadUpdateInfo();
+        })();
+    </script>
+</body>
+  </html>
